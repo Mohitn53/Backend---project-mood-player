@@ -1,5 +1,8 @@
 import React from 'react'
-import { Routes } from 'react-router-dom'
+import { Routes,Route } from 'react-router-dom'
+import Landing from '../pages/Landing'
+import DetectMood from '../pages/DetectMood'
+import Result from '../pages/Result'
 
 const MainRoutes = () => {
   return (
