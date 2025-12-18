@@ -1,61 +1,32 @@
 import React, { useContext, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import { 
   Play, 
   Pause, 
   RefreshCw, 
-  Heart, 
-  Share2, 
   MoreHorizontal,
   Sparkles
 } from 'lucide-react';
 import { MoodContext } from '../context/MoodContext';
 
 const Result = () => {
-  const [mood,setmood] = useContext(MoodContext)
+  const [mood] = useContext(MoodContext);
+  const location = useLocation();
   const [currentSong, setCurrentSong] = useState(null);
+  const [audio] = useState(new Audio());
 
-  // Mock Data
-  const mockSongs = [
-    {
-      id: 1,
-      title: "Blinding Lights",
-      artist: "The Weeknd",
-      cover: "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
-      duration: "3:20"
-    },
-    {
-      id: 2,
-      title: "Levitating",
-      artist: "Dua Lipa",
-      cover: "https://i.scdn.co/image/ab67616d00001e02d53d88e2a5f8c0e8a17c9c91",
-      duration: "3:23"
-    },
-    {
-      id: 3,
-      title: "Perfect",
-      artist: "Ed Sheeran",
-      cover: "https://i.scdn.co/image/ab67616d00001e02cdd9b50c1dfe2e4b4b7f1c59",
-      duration: "4:23"
-    },
-    {
-      id: 4,
-      title: "As It Was",
-      artist: "Harry Styles",
-      cover: "https://i.scdn.co/image/ab67616d0000b273298f92d5a67756fa59862d5f",
-      duration: "2:47"
-    },
-  ];
+  // --- HANDLE DATA NESTING ---
+  const incomingData = location.state?.songs;
+  const apiSongs = incomingData?.songs || []; 
 
-  // Animation Variants for Staggered List
+  // Animation Variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
+      transition: { staggerChildren: 0.1 }
     }
   };
 
@@ -64,13 +35,27 @@ const Result = () => {
     visible: { y: 0, opacity: 1 }
   };
 
-  const handlePlay = (id) => {
-    if (currentSong === id) {
-      setCurrentSong(null); // Pause
+  const handlePlay = (song) => {
+    if (currentSong === song._id) {
+      audio.pause();
+      setCurrentSong(null);
     } else {
-      setCurrentSong(id); // Play
+      if (song.url) {
+        audio.src = song.url;
+        audio.play().catch(e => console.error("Playback failed", e));
+        setCurrentSong(song._id);
+      } else {
+        console.warn("No URL for this song");
+      }
     }
   };
+
+  // Cleanup audio on unmount
+  React.useEffect(() => {
+    return () => {
+      audio.pause();
+    };
+  }, [audio]);
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 px-4 py-8 relative overflow-hidden">
@@ -108,7 +93,7 @@ const Result = () => {
             transition={{ delay: 0.2 }}
             className="text-4xl font-bold text-white mb-2"
           >
-            You seem <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-orange-400">{mood}</span>
+            You seem <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-orange-400 capitalize">{mood || "Neutral"}</span>
           </motion.h2>
           
           <motion.p 
@@ -143,62 +128,72 @@ const Result = () => {
             initial="hidden"
             animate="visible"
           >
-            {mockSongs.map((song) => {
-              const isPlaying = currentSong === song.id;
-              
-              return (
-                <motion.div 
-                  key={song.id} 
-                  variants={itemVariants}
-                  className={`group flex items-center gap-3 p-3 rounded-xl transition-all duration-300 cursor-pointer ${
-                    isPlaying ? 'bg-white/10 border border-white/10' : 'hover:bg-white/5 border border-transparent hover:border-white/5'
-                  }`}
-                  onClick={() => handlePlay(song.id)}
-                >
-                  {/* Album Art with Play Overlay */}
-                  <div className="relative w-12 h-12 flex-shrink-0">
-                    <img 
-                      src={song.cover} 
-                      alt={song.title} 
-                      className={`w-full h-full object-cover rounded-lg shadow-md transition-transform duration-300 ${isPlaying ? 'scale-105' : ''}`}
-                    />
-                    {/* Overlay Icon */}
-                    <div className={`absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg transition-opacity duration-200 ${isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                      {isPlaying ? <Pause size={16} className="text-white fill-current" /> : <Play size={16} className="text-white fill-current" />}
-                    </div>
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <h4 className={`text-sm font-semibold truncate ${isPlaying ? 'text-indigo-300' : 'text-white'}`}>
-                      {song.title}
-                    </h4>
-                    <p className="text-xs text-slate-400 truncate">
-                      {song.artist}
-                    </p>
-                  </div>
-
-                  {/* Equalizer / Duration */}
-                  <div className="text-right">
-                    {isPlaying ? (
-                       <div className="flex items-end gap-[2px] h-3">
-                         <motion.div animate={{ height: [4, 12, 6, 12] }} transition={{ repeat: Infinity, duration: 0.5 }} className="w-1 bg-indigo-400 rounded-full" />
-                         <motion.div animate={{ height: [12, 6, 12, 4] }} transition={{ repeat: Infinity, duration: 0.5 }} className="w-1 bg-indigo-400 rounded-full" />
-                         <motion.div animate={{ height: [6, 12, 4, 8] }} transition={{ repeat: Infinity, duration: 0.5 }} className="w-1 bg-indigo-400 rounded-full" />
-                       </div>
-                    ) : (
-                      <span className="text-xs text-slate-500 font-medium">{song.duration}</span>
-                    )}
-                  </div>
+             {/* CHECK: Ensure apiSongs is an array */}
+             {Array.isArray(apiSongs) && apiSongs.length > 0 ? (
+                apiSongs.map((song) => {
+                  const isPlaying = currentSong === song._id;
                   
-                  {/* Options (Hidden on Mobile usually, visible on hover) */}
-                  <div className="hidden sm:block opacity-0 group-hover:opacity-100 transition-opacity">
-                    <MoreHorizontal size={16} className="text-slate-400 hover:text-white" />
-                  </div>
+                  return (
+                    <motion.div 
+                      key={song._id} 
+                      variants={itemVariants}
+                      className={`group flex items-center gap-3 p-3 rounded-xl transition-all duration-300 cursor-pointer ${
+                        isPlaying ? 'bg-white/10 border border-white/10' : 'hover:bg-white/5 border border-transparent hover:border-white/5'
+                      }`}
+                      onClick={() => handlePlay(song)}
+                    >
+                      {/* Album Art with Play Overlay */}
+                      <div className="relative w-12 h-12 flex-shrink-0">
+                        <img
+                          src={song.cover || "https://placehold.co/100x100/1e1e2e/FFF?text=Music"}
+                          alt={song.title}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
 
-                </motion.div>
-              );
-            })}
+                        {/* Overlay Icon */}
+                        <div className={`absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg transition-opacity duration-200 ${isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                          {isPlaying ? <Pause size={16} className="text-white fill-current" /> : <Play size={16} className="text-white fill-current" />}
+                        </div>
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <h4 className={`text-sm font-semibold truncate ${isPlaying ? 'text-indigo-300' : 'text-white'}`}>
+                          {song.title}
+                        </h4>
+                        <p className="text-xs text-slate-400 truncate">
+                          {song.artist}
+                        </p>
+                      </div>
+
+                      {/* Equalizer / Duration */}
+                      <div className="text-right">
+                        {isPlaying ? (
+                           <div className="flex items-end gap-[2px] h-3">
+                             <motion.div animate={{ height: [4, 12, 6, 12] }} transition={{ repeat: Infinity, duration: 0.5 }} className="w-1 bg-indigo-400 rounded-full" />
+                             <motion.div animate={{ height: [12, 6, 12, 4] }} transition={{ repeat: Infinity, duration: 0.5 }} className="w-1 bg-indigo-400 rounded-full" />
+                             <motion.div animate={{ height: [6, 12, 4, 8] }} transition={{ repeat: Infinity, duration: 0.5 }} className="w-1 bg-indigo-400 rounded-full" />
+                           </div>
+                        ) : (
+                          <span className="text-xs text-slate-500">
+                            {song.duration || "3:00"}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Options */}
+                      <div className="hidden sm:block opacity-0 group-hover:opacity-100 transition-opacity">
+                        <MoreHorizontal size={16} className="text-slate-400 hover:text-white" />
+                      </div>
+
+                    </motion.div>
+                  );
+                })
+             ) : (
+                <div className="text-center py-8 text-slate-500">
+                    <p>No songs found for this mood.</p>
+                </div>
+             )}
           </motion.div>
         </motion.div>
 
@@ -207,19 +202,14 @@ const Result = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
-          className="flex items-center gap-4 mt-8"
+          className="mt-8 px-4"
         >
-          <Link to="/detect" className="flex-1">
-            <button className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-medium hover:bg-white/10 transition-all active:scale-95">
+          <Link to="/detect">
+            <button className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-white text-slate-900 font-bold shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:scale-[1.02] transition-all active:scale-95">
               <RefreshCw size={18} />
-              <span>Retake</span>
+              <span>Detect Another Mood</span>
             </button>
           </Link>
-          
-          <button className="flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold shadow-lg shadow-indigo-900/40 hover:shadow-indigo-900/60 transition-all active:scale-95">
-            <Share2 size={18} />
-            <span>Share Vibe</span>
-          </button>
         </motion.div>
 
       </div>
