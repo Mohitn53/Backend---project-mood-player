@@ -12,7 +12,6 @@ import {
   Loader2,
   AlertCircle,
   ScanFace,
-  Sparkles
 } from "lucide-react";
 
 import { initFaceLandmarker } from "../utils/initFaceLandmarker";
@@ -47,22 +46,20 @@ const DetectMood = () => {
 
     const video = videoRef.current;
 
-    if (video.readyState < 2 || video.videoWidth === 0) {
-      alert("Camera not ready. Please wait a moment.");
+    // Looser check to prevent errors on some mobile browsers
+    if (video.readyState < 2) { 
+      alert("Camera initializing...");
       return;
     }
 
     setLoadingAI(true);
 
     try {
-      const results = landmarkerRef.current.detectForVideo(
-        video,
-        performance.now()
-      );
+      const results = landmarkerRef.current.detectForVideo(video, performance.now());
 
       if (!results.faceBlendshapes?.length) {
         alert("No face detected. Please align your face in the frame.");
-        setLoadingAI(false); // Stop loading if no face
+        setLoadingAI(false);
         return;
       }
 
@@ -72,9 +69,7 @@ const DetectMood = () => {
       setMood(detectedMood);
       console.log("Detected:", detectedMood);
       
-      const response = await axios.get(
-        `http://localhost:3000/song?mood=${detectedMood}`
-      );
+      const response = await axios.get(`http://localhost:3000/song?mood=${detectedMood}`);
       
       navigate("/result", { state: { songs: response.data } });
     } catch (err) {
@@ -89,7 +84,7 @@ const DetectMood = () => {
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-950 px-4 py-6 relative overflow-hidden">
       
-      {/* --- 1. Ambient Background --- */}
+      {/* 1. Ambient Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
          <motion.div 
            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3], rotate: [0, 90, 0] }}
@@ -100,7 +95,7 @@ const DetectMood = () => {
 
       <div className="w-full max-w-md relative z-10 space-y-6">
 
-        {/* --- 2. Header --- */}
+        {/* 2. Header */}
         <div className="text-center space-y-2">
           <motion.h2 
              initial={{ opacity: 0, y: -10 }} 
@@ -115,10 +110,11 @@ const DetectMood = () => {
           </div>
         </div>
 
-        {/* --- 3. Viewfinder / Camera Frame --- */}
+        {/* 3. Viewfinder / Camera Frame */}
+        {/* Added 'bg-black' to hide any loading glitches */}
         <div className="relative mx-auto w-full aspect-[3/4] max-w-sm rounded-[2.5rem] overflow-hidden bg-black border border-white/10 shadow-2xl z-20">
           
-          {/* Status Pill (Floating Top) */}
+          {/* Status Pill */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-xs font-medium text-white/90">
             {loadingAI ? (
                 <>
@@ -141,7 +137,7 @@ const DetectMood = () => {
             )}
           </div>
 
-          {/* Video Container */}
+          {/* VIDEO CONTAINER */}
           <div className="absolute inset-0 w-full h-full bg-slate-900">
              
              {/* Placeholder (When inactive) */}
@@ -155,8 +151,8 @@ const DetectMood = () => {
                 </div>
              )}
 
-             {/* The Actual Video */}
-             <div className={`relative w-full h-full ${isActive ? 'opacity-100' : 'opacity-0'} transition-opacity duration-500`}>
+             {/* The Actual Video: Absolute + Inset-0 + Object-Cover */}
+             <div className={`absolute inset-0 w-full h-full ${isActive ? 'opacity-100' : 'opacity-0'} transition-opacity duration-500`}>
                 <CameraView videoRef={videoRef} />
              </div>
 
@@ -168,7 +164,7 @@ const DetectMood = () => {
                </div>
              )}
 
-             {/* --- HUD Overlays (Scanner & Brackets) --- */}
+             {/* HUD Overlays */}
              <AnimatePresence>
                 {(isActive || loadingAI) && (
                    <motion.div 
@@ -177,19 +173,19 @@ const DetectMood = () => {
                      exit={{ opacity: 0 }}
                      className="absolute inset-0 z-20 pointer-events-none"
                    >
-                      {/* Scanning Laser Line */}
+                      {/* Scanning Laser */}
                       <motion.div 
                         animate={{ top: ["10%", "90%", "10%"] }}
                         transition={{ duration: loadingAI ? 1.5 : 4, ease: "linear", repeat: Infinity }}
                         className={`absolute left-0 right-0 h-[2px] shadow-[0_0_20px_rgba(99,102,241,0.8)] ${loadingAI ? 'bg-green-400 shadow-green-400/50' : 'bg-indigo-500'}`}
                       />
                       
-                      {/* Focus Ring (Only when not loading) */}
+                      {/* Focus Ring */}
                       {!loadingAI && (
                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-64 border border-indigo-500/30 rounded-[45%] opacity-50" />
                       )}
 
-                      {/* Analysis Grid (Only when loading) */}
+                      {/* Analysis Blur Overlay */}
                       {loadingAI && (
                         <motion.div 
                            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -209,7 +205,7 @@ const DetectMood = () => {
 
         </div>
 
-        {/* --- 4. Controls --- */}
+        {/* 4. Controls */}
         <div className="space-y-4 pt-2">
           {!isActive ? (
              <button
